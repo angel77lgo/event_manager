@@ -1,5 +1,0 @@
-{
-    "extends": "./tsconfig.json",
-    "include": ["src/**/*.ts", "test/**/*.ts"],  // Ajusta las rutas a donde están tus archivos
-    "exclude": ["node_modules"]
-  }
