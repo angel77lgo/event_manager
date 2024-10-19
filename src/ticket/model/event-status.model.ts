@@ -7,30 +7,22 @@ import {
   PrimaryKey,
   Table,
 } from 'sequelize-typescript';
+
 import { v4 as uuidv4 } from 'uuid';
-import { Ticket } from '../../ticket/model/ticket.model';
+import { TicketStatusLog } from './event-status-log.model';
 
 @Table
-export class Event extends Model {
+export class TicketStatus extends Model {
   @PrimaryKey
   @Default(uuidv4)
   @Column({ type: DataTypes.UUID, defaultValue: uuidv4 })
   id: string;
 
-  @Column({ type: DataTypes.TEXT, allowNull: false })
+  @Column({ type: DataTypes.STRING, allowNull: false })
   name: string;
 
-  @Column({ type: DataTypes.INTEGER, allowNull: false })
-  numberOfTickets: number;
-
-  @Column({ type: DataTypes.DATE, allowNull: false })
-  startDate: Date;
-
-  @Column({ type: DataTypes.DATE, allowNull: false })
-  endDate: Date;
-
-  @HasMany(() => Ticket)
-  tickets: Ticket[];
+  @HasMany(() => TicketStatusLog)
+  logs: TicketStatusLog[];
 
   @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
   createdAt: Date;

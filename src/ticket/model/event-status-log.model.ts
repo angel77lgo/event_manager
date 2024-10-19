@@ -1,36 +1,38 @@
 import { DataTypes } from 'sequelize';
 import {
+  BelongsTo,
   Column,
   Default,
-  HasMany,
+  ForeignKey,
   Model,
   PrimaryKey,
   Table,
 } from 'sequelize-typescript';
+
 import { v4 as uuidv4 } from 'uuid';
-import { Ticket } from '../../ticket/model/ticket.model';
+import { Ticket } from './ticket.model';
+import { TicketStatus } from './event-status.model';
 
 @Table
-export class Event extends Model {
+export class TicketStatusLog extends Model {
   @PrimaryKey
   @Default(uuidv4)
   @Column({ type: DataTypes.UUID, defaultValue: uuidv4 })
   id: string;
 
-  @Column({ type: DataTypes.TEXT, allowNull: false })
-  name: string;
+  @ForeignKey(() => Ticket)
+  @Column({ type: DataTypes.UUID, allowNull: false })
+  ticketId: string;
 
-  @Column({ type: DataTypes.INTEGER, allowNull: false })
-  numberOfTickets: number;
+  @BelongsTo(() => Ticket)
+  ticket: Ticket;
 
-  @Column({ type: DataTypes.DATE, allowNull: false })
-  startDate: Date;
+  @ForeignKey(() => TicketStatus)
+  @Column({ type: DataTypes.UUID, allowNull: false })
+  ticketStatusId: string;
 
-  @Column({ type: DataTypes.DATE, allowNull: false })
-  endDate: Date;
-
-  @HasMany(() => Ticket)
-  tickets: Ticket[];
+  @BelongsTo(() => TicketStatus)
+  ticketStatus: TicketStatus;
 
   @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
   createdAt: Date;
