@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/sequelize';
 import { Event } from '../model/event.model';
 import { TicketService } from '../../ticket/services/ticket.service';
-import { TCreateEvent } from '../types/event.types';
+import { TCreateEvent, TEvent } from '../types/event.types';
 import { TCreateTicket, TICKET_STATUS } from '../../ticket/types/ticket.types';
 import { processInBatches } from '../../utils/utils';
 import { Ticket } from '../../ticket/model/ticket.model';
@@ -23,7 +23,7 @@ export class EventService {
     @Inject(TicketService) private readonly ticketService: TicketService,
   ) {}
 
-  async getAllEvents() {
+  async getAllEvents(): Promise<TEvent[]> {
     const events = await this.eventRepository.findAll({
       where: { deletedAt: null },
       include: [
@@ -41,7 +41,7 @@ export class EventService {
       ],
     });
 
-    const newEvents = events.map((event) => {
+    const newEvents: TEvent[] = events.map((event) => {
       const ticketsInfo = getTicketsFormatted(event.tickets);
 
       const { ticketsSold, ticketsRedeemed, tickets } = ticketsInfo;
@@ -59,10 +59,10 @@ export class EventService {
       };
     });
 
-    return { events: newEvents };
+    return newEvents;
   }
 
-  async getEventById(eventId: string) {
+  async getEventById(eventId: string): Promise<TEvent> {
     const event = await this.eventRepository.findOne({
       where: { id: eventId, deletedAt: null },
       include: [
@@ -137,7 +137,7 @@ export class EventService {
 
       await transaction.commit();
 
-      return { message: 'Event created successfully', event };
+      return { message: `Event created successfully with id ${event.id}` };
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -313,6 +313,8 @@ export class EventService {
       await this.ticketService.deleteAllTicketsByEventId(eventId, transaction);
 
       await transaction.commit();
+
+      return { message: 'Event deleted successfully' };
     } catch (error) {
       await transaction.rollback();
       throw error;
