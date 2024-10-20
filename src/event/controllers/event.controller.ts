@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
@@ -31,8 +32,12 @@ export class EventController {
     @Param('eventId') eventId: string,
     @Body(new JoiValidationPipe(eventSchema)) data: TCreateEvent,
   ) {
-    console.log('updating event controller');
     return await this.eventService.updateEvent(eventId, data);
+  }
+
+  @Delete(':eventId')
+  async deleteEvent(@Param('eventId') eventId: string) {
+    return await this.eventService.deleteEvent(eventId);
   }
 
   @Put('/ticket/sold/:ticketId')

@@ -13,7 +13,8 @@ import { processInBatches } from '../../utils/utils';
 import { Ticket } from '../../ticket/model/ticket.model';
 import { TicketStatusLog } from '../../ticket/model/ticket-status-log.model';
 import { TicketStatus } from '../../ticket/model/ticket-status.model';
-import { getTicketsFormatted } from '../utils/utils';
+import { getSoldTicketsTotal, getTicketsFormatted } from '../utils/utils';
+import { Transaction } from 'sequelize';
 
 @Injectable()
 export class EventService {
@@ -171,15 +172,9 @@ export class EventService {
 
       this.validateDate(startDate, endDate);
 
-      console.log('event.remainingTickets', event.remainingTickets);
+      const ticketsSolds = getSoldTicketsTotal(event.tickets);
 
-      console.log('pass');
-
-      const ticketsSolds = event.tickets.filter(
-        (event) => event.logs[0].ticketStatus.name === TICKET_STATUS.SOLD,
-      );
-
-      const newRemainingTickets = numberOfTotalTickets - ticketsSolds.length;
+      const newRemainingTickets = numberOfTotalTickets - ticketsSolds;
 
       await this.eventRepository.update(
         {
@@ -193,45 +188,130 @@ export class EventService {
       );
 
       if (numberOfTotalTickets > event.numberOfTotalTickets) {
-        const ticketsToCreate: TCreateTicket[] = Array.from(
-          { length: numberOfTotalTickets - event.numberOfTotalTickets },
-          () => ({
-            eventId,
-            isAvailable: true,
-          }),
-        );
-        await processInBatches(ticketsToCreate, (ticketToCreate) => {
-          return this.ticketService.createTicket(ticketToCreate, transaction);
-        });
+        await this.addTicketsToEvent(numberOfTotalTickets, event, transaction);
       } else if (numberOfTotalTickets < event.numberOfTotalTickets) {
-        console.log('enterin else if');
-
-        if (numberOfTotalTickets > event.remainingTickets) {
-          throw new BadRequestException(
-            'Number of total tickets must be less than or equal to remaining tickets',
-          );
-        }
-
-        const ticketsPending = event.tickets.filter(
-          (ticket) =>
-            ticket.isAvailable &&
-            ticket.logs[0].ticketStatus.name === TICKET_STATUS.PENDING,
-        );
-
-        console.log('ticketsPending', ticketsPending.length);
-
-        const diffTicketsNumber =
-          event.numberOfTotalTickets - numberOfTotalTickets;
-
-        const ticketsToDelete = ticketsPending.slice(0, diffTicketsNumber);
-
-        console.log('ticketsToDelete', JSON.stringify(ticketsToDelete));
-        console.log('ticketsToDelete length', ticketsToDelete.length);
-
-        await processInBatches(ticketsToDelete, (ticket) =>
-          this.ticketService.deleteTicketById(ticket.id, transaction),
+        await this.removeTicketsFromEvent(
+          numberOfTotalTickets,
+          event,
+          transaction,
         );
       }
+      await transaction.commit();
+      return { message: 'Event updated successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  private async addTicketsToEvent(
+    numberOfTotalTickets: number,
+    event: Event,
+    ts?: Transaction,
+  ) {
+    const transaction = !ts
+      ? await this.eventRepository.sequelize.transaction()
+      : ts;
+
+    try {
+      const ticketsToCreate: TCreateTicket[] = Array.from(
+        { length: numberOfTotalTickets - event.numberOfTotalTickets },
+        () => ({
+          eventId: event.id,
+          isAvailable: true,
+        }),
+      );
+      await processInBatches(ticketsToCreate, (ticketToCreate) => {
+        return this.ticketService.createTicket(ticketToCreate, transaction);
+      });
+      if (!ts) await transaction.commit();
+    } catch (error) {
+      if (!ts) await transaction.rollback();
+      throw error;
+    }
+  }
+
+  private async removeTicketsFromEvent(
+    numberOfTotalTickets: number,
+    event: Event,
+    ts: Transaction,
+  ) {
+    const transaction = !ts
+      ? await this.eventRepository.sequelize.transaction()
+      : ts;
+    try {
+      const ticketsSold = getSoldTicketsTotal(event.tickets);
+
+      if (ticketsSold > numberOfTotalTickets) {
+        throw new BadRequestException(
+          'Cannot remove tickets with sold tickets',
+        );
+      }
+
+      const ticketsPending = event.tickets.filter(
+        (ticket) =>
+          ticket.isAvailable &&
+          ticket.logs[0].ticketStatus.name === TICKET_STATUS.PENDING,
+      );
+
+      const diffTicketsNumber =
+        event.numberOfTotalTickets - numberOfTotalTickets;
+
+      const ticketsToDelete = ticketsPending.slice(0, diffTicketsNumber);
+
+      await processInBatches(ticketsToDelete, (ticket) =>
+        this.ticketService.deleteTicketById(ticket.id, transaction),
+      );
+      if (!ts) await transaction.commit();
+    } catch (error) {
+      if (!ts) await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async deleteEvent(eventId: string) {
+    const transaction = await this.eventRepository.sequelize.transaction();
+
+    try {
+      const currentDateTime = new Date();
+      const event = await this.eventRepository.findOne({
+        where: { id: eventId },
+        include: [
+          {
+            model: Ticket,
+            where: { deletedAt: null },
+            include: [
+              {
+                model: TicketStatusLog,
+                where: { validUntil: null },
+                include: [{ model: TicketStatus, attributes: ['name'] }],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!event) {
+        throw new NotFoundException(`Event with id ${eventId} not found`);
+      }
+
+      const soldTickets = getSoldTicketsTotal(event.tickets);
+
+      if (event.endDate < currentDateTime || soldTickets > 0) {
+        throw new BadRequestException(
+          'Cannot delete event with sold tickets or past end date',
+        );
+      }
+
+      await this.eventRepository.update(
+        {
+          deletedAt: currentDateTime,
+        },
+        { where: { id: eventId }, transaction },
+      );
+
+      await this.ticketService.deleteAllTicketsByEventId(eventId, transaction);
+
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();

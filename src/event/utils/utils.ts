@@ -32,3 +32,9 @@ export const getTicketsFormatted = (tickets: Ticket[]): TTicketDetailDto => {
     tickets: newTickets,
   };
 };
+
+export const getSoldTicketsTotal = (tickets: Ticket[]): number => {
+  return tickets.filter(
+    (ticket) => ticket.logs[0].ticketStatus.name === TICKET_STATUS.SOLD,
+  ).length;
+};

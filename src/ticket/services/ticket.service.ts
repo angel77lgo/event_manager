@@ -18,6 +18,7 @@ import { TicketStatusLogService } from './ticket-status-log.service';
 import { TicketStatusService } from './ticket-status.service';
 import { TicketStatusLog } from '../model/ticket-status-log.model';
 import { TicketStatus } from '../model/ticket-status.model';
+import { processInBatches } from '../../utils/utils';
 
 @Injectable()
 export class TicketService {
@@ -134,6 +135,32 @@ export class TicketService {
         ticketId,
         transaction,
       );
+      if (!ts) await transaction.commit();
+    } catch (error) {
+      if (!ts) await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async deleteAllTicketsByEventId(eventId: string, ts?: Transaction) {
+    const transaction = !ts
+      ? await this.ticketRepository.sequelize.transaction()
+      : ts;
+
+    try {
+      const allTickets = await this.ticketRepository.findAll({
+        where: { eventId, deletedAt: null },
+      });
+
+      await this.ticketRepository.update(
+        { deletedAt: new Date() },
+        { where: { eventId }, transaction },
+      );
+
+      await processInBatches(allTickets, (ticket) =>
+        this.ticketStatusLogService.deleteLogByTicketId(ticket.id, transaction),
+      );
+
       if (!ts) await transaction.commit();
     } catch (error) {
       if (!ts) await transaction.rollback();
