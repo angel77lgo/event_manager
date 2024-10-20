@@ -180,7 +180,6 @@ export class TicketService {
           include: [{ model: TicketStatus, attributes: ['name'] }],
         },
       ],
-      logging: true,
     });
   }
 

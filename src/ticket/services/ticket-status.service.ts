@@ -12,7 +12,6 @@ export class TicketStatusService {
   async findByName(name: string): Promise<TicketStatus> {
     const ticketStatus = await this.ticketStatusRepository.findOne({
       where: { name },
-      logging: true,
     });
 
     if (!ticketStatus) {
