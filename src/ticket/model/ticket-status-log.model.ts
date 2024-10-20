@@ -11,9 +11,9 @@ import {
 
 import { v4 as uuidv4 } from 'uuid';
 import { Ticket } from './ticket.model';
-import { TicketStatus } from './event-status.model';
+import { TicketStatus } from './ticket-status.model';
 
-@Table
+@Table({ tableName: 'TicketStatusLog' })
 export class TicketStatusLog extends Model {
   @PrimaryKey
   @Default(uuidv4)
@@ -33,6 +33,9 @@ export class TicketStatusLog extends Model {
 
   @BelongsTo(() => TicketStatus)
   ticketStatus: TicketStatus;
+
+  @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
+  validUntil: Date;
 
   @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
   createdAt: Date;

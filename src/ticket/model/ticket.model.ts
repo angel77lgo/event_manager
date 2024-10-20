@@ -12,9 +12,9 @@ import {
 
 import { v4 as uuidv4 } from 'uuid';
 import { Event } from '../../event/model/event.model';
-import { TicketStatusLog } from './event-status-log.model';
+import { TicketStatusLog } from './ticket-status-log.model';
 
-@Table
+@Table({ tableName: 'Ticket' })
 export class Ticket extends Model {
   @PrimaryKey
   @Default(uuidv4)
@@ -24,6 +24,9 @@ export class Ticket extends Model {
   @ForeignKey(() => Event)
   @Column({ type: DataTypes.UUID, allowNull: false })
   eventId: string;
+
+  @Column({ type: DataTypes.BOOLEAN, allowNull: false })
+  isAvailable: boolean;
 
   @BelongsTo(() => Event)
   event: Event;

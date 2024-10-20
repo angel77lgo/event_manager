@@ -9,9 +9,9 @@ import {
 } from 'sequelize-typescript';
 
 import { v4 as uuidv4 } from 'uuid';
-import { TicketStatusLog } from './event-status-log.model';
+import { TicketStatusLog } from './ticket-status-log.model';
 
-@Table
+@Table({ tableName: 'TicketStatus' })
 export class TicketStatus extends Model {
   @PrimaryKey
   @Default(uuidv4)

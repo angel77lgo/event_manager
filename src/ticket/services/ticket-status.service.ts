@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { TicketStatus } from '../model/event-status.model';
+import { TicketStatus } from '../model/ticket-status.model';
 
 @Injectable()
 export class TicketStatusService {
@@ -10,9 +10,13 @@ export class TicketStatusService {
   ) {}
 
   async findByName(name: string): Promise<TicketStatus> {
+    console.log('name:', name);
     const ticketStatus = await this.ticketStatusRepository.findOne({
       where: { name },
+      logging: true,
     });
+
+    console.log('ticketStatus:', ticketStatus);
 
     if (!ticketStatus) {
       throw new Error(`Ticket status with name ${name} not found`);

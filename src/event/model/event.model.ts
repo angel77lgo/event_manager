@@ -10,7 +10,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { Ticket } from '../../ticket/model/ticket.model';
 
-@Table
+@Table({ tableName: 'Event' })
 export class Event extends Model {
   @PrimaryKey
   @Default(uuidv4)
@@ -21,7 +21,10 @@ export class Event extends Model {
   name: string;
 
   @Column({ type: DataTypes.INTEGER, allowNull: false })
-  numberOfTickets: number;
+  numberOfTotalTickets: number;
+
+  @Column({ type: DataTypes.INTEGER, allowNull: false })
+  remainingTickets: number;
 
   @Column({ type: DataTypes.DATE, allowNull: false })
   startDate: Date;

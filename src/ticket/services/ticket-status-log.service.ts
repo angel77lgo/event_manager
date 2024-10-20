@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { TicketStatusLog } from '../model/event-status-log.model';
+import { TicketStatusLog } from '../model/ticket-status-log.model';
 import { TCreateTicketLog } from '../types/ticket.types';
 import { Transaction } from 'sequelize';
 
@@ -20,7 +20,7 @@ export class TicketStatusLogService {
       const { ticketId, ticketStatusId } = data;
 
       const currentStatus = await this.ticketStatusLogRepository.findOne({
-        where: { ticketId, valdiUntil: null },
+        where: { ticketId, validUntil: null },
       });
 
       if (currentStatus) {

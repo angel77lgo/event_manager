@@ -20,19 +20,33 @@ export class TicketService {
     private readonly ticketStatusService: TicketStatusService,
   ) {}
 
-  async bulkCreate(data: TCreateTicket[], ts?: Transaction) {
-    const transaction: Transaction = !ts
+  async createTicket(data: TCreateTicket, ts?: Transaction): Promise<Ticket> {
+    const transaction = !ts
       ? await this.ticketRepository.sequelize.transaction()
       : ts;
 
     try {
-      const ticketsToCreate: TCreateTicketOptional[] = data.map((ticket) => ({
-        ...ticket,
-      }));
+      const { eventId, isAvailable } = data;
 
-      await this.ticketRepository.bulkCreate(ticketsToCreate, { transaction });
+      const ticket = await this.ticketRepository.create(
+        { eventId, isAvailable },
+        { transaction },
+      );
+
+      const ticketStatus = await this.ticketStatusService.findByName(
+        TICKET_STATUS.PENDING,
+      );
+
+      console.log('tickerStatus:', ticketStatus);
+
+      await this.ticketStatusLogService.create(
+        { ticketId: ticket.id, ticketStatusId: ticketStatus.id },
+        transaction,
+      );
 
       if (!ts) await transaction.commit();
+
+      return ticket;
     } catch (error) {
       if (!ts) await transaction.rollback();
       throw error;

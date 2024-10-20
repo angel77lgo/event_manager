@@ -24,6 +24,7 @@ export = {
         allowNull: true,
         defaultValue: DataTypes.NOW,
       },
+      deletedAt: { type: DataTypes.DATE, allowNull: true },
     });
   },
 

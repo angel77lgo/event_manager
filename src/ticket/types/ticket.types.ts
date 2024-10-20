@@ -7,7 +7,7 @@ export interface TCreateTicketLog {
 
 export interface TCreateTicket {
   id?: number;
-  eventId: number;
+  eventId: string;
   isAvailable: boolean;
 }
 
