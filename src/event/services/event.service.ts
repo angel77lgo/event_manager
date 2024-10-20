@@ -28,6 +28,7 @@ export class EventService {
       include: [
         {
           model: Ticket,
+          where: { deletedAt: null },
           include: [
             {
               model: TicketStatusLog,
@@ -66,6 +67,7 @@ export class EventService {
       include: [
         {
           model: Ticket,
+          where: { deletedAt: null },
           include: [
             {
               model: TicketStatusLog,
@@ -104,6 +106,8 @@ export class EventService {
     try {
       const { name, numberOfTotalTickets, startDate, endDate } = data;
 
+      this.validateDate(startDate, endDate);
+
       const event = await this.eventRepository.create(
         {
           name,
@@ -133,6 +137,102 @@ export class EventService {
       await transaction.commit();
 
       return { message: 'Event created successfully', event };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async updateEvent(eventId: string, data: TCreateEvent) {
+    const transaction = await this.eventRepository.sequelize.transaction();
+    const event = await this.eventRepository.findOne({
+      where: { id: eventId },
+      include: [
+        {
+          model: Ticket,
+          where: { deletedAt: null },
+          include: [
+            {
+              model: TicketStatusLog,
+              where: { validUntil: null },
+              include: [{ model: TicketStatus, attributes: ['name'] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with id ${eventId} not found`);
+    }
+
+    try {
+      const { name, numberOfTotalTickets, startDate, endDate } = data;
+
+      this.validateDate(startDate, endDate);
+
+      console.log('event.remainingTickets', event.remainingTickets);
+
+      console.log('pass');
+
+      const ticketsSolds = event.tickets.filter(
+        (event) => event.logs[0].ticketStatus.name === TICKET_STATUS.SOLD,
+      );
+
+      const newRemainingTickets = numberOfTotalTickets - ticketsSolds.length;
+
+      await this.eventRepository.update(
+        {
+          name,
+          numberOfTotalTickets,
+          remainingTickets: newRemainingTickets,
+          startDate,
+          endDate,
+        },
+        { where: { id: eventId }, transaction },
+      );
+
+      if (numberOfTotalTickets > event.numberOfTotalTickets) {
+        const ticketsToCreate: TCreateTicket[] = Array.from(
+          { length: numberOfTotalTickets - event.numberOfTotalTickets },
+          () => ({
+            eventId,
+            isAvailable: true,
+          }),
+        );
+        await processInBatches(ticketsToCreate, (ticketToCreate) => {
+          return this.ticketService.createTicket(ticketToCreate, transaction);
+        });
+      } else if (numberOfTotalTickets < event.numberOfTotalTickets) {
+        console.log('enterin else if');
+
+        if (numberOfTotalTickets > event.remainingTickets) {
+          throw new BadRequestException(
+            'Number of total tickets must be less than or equal to remaining tickets',
+          );
+        }
+
+        const ticketsPending = event.tickets.filter(
+          (ticket) =>
+            ticket.isAvailable &&
+            ticket.logs[0].ticketStatus.name === TICKET_STATUS.PENDING,
+        );
+
+        console.log('ticketsPending', ticketsPending.length);
+
+        const diffTicketsNumber =
+          event.numberOfTotalTickets - numberOfTotalTickets;
+
+        const ticketsToDelete = ticketsPending.slice(0, diffTicketsNumber);
+
+        console.log('ticketsToDelete', JSON.stringify(ticketsToDelete));
+        console.log('ticketsToDelete length', ticketsToDelete.length);
+
+        await processInBatches(ticketsToDelete, (ticket) =>
+          this.ticketService.deleteTicketById(ticket.id, transaction),
+        );
+      }
+      await transaction.commit();
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -207,6 +307,12 @@ export class EventService {
 
     if (event.remainingTickets <= 0) {
       throw new BadRequestException('No tickets available');
+    }
+  }
+
+  private validateDate(startDate: Date, endDate: Date) {
+    if (startDate > endDate) {
+      throw new BadRequestException('Start date must be before end date');
     }
   }
 }

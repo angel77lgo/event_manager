@@ -1,3 +1,11 @@
+import {
+  ArgumentMetadata,
+  BadRequestException,
+  Injectable,
+  PipeTransform,
+} from '@nestjs/common';
+import * as Joi from 'joi';
+
 export async function processInBatches<T, R>(
   array: T[],
   func: (item: T) => Promise<R>,
@@ -12,4 +20,19 @@ export async function processInBatches<T, R>(
   }
 
   return results;
+}
+
+@Injectable()
+export class JoiValidationPipe implements PipeTransform {
+  constructor(private schema: Joi.ObjectSchema) {}
+
+  transform(value: any, metadata: ArgumentMetadata) {
+    const { error } = this.schema.validate(value);
+    if (error) {
+      throw new BadRequestException(
+        `Validation failed: ${error.details[0].message}`,
+      );
+    }
+    return value;
+  }
 }

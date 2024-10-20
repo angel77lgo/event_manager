@@ -23,8 +23,6 @@ export class TicketStatusLogService {
         where: { ticketId, validUntil: null },
       });
 
-      console.log('currentStatus', currentStatus);
-
       if (currentStatus) {
         await this.deleteTicketStatus(currentStatus.id, transaction);
       }
@@ -52,6 +50,25 @@ export class TicketStatusLogService {
         { where: { id }, transaction },
       );
 
+      if (!ts) await transaction.commit();
+    } catch (error) {
+      if (!ts) await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async deleteLogByTicketId(ticketId: string, ts?: Transaction): Promise<void> {
+    const transaction = !ts
+      ? await this.ticketStatusLogRepository.sequelize.transaction()
+      : ts;
+
+    try {
+      await this.ticketStatusLogRepository.update(
+        {
+          deletedAt: new Date(),
+        },
+        { where: { ticketId }, transaction },
+      );
       if (!ts) await transaction.commit();
     } catch (error) {
       if (!ts) await transaction.rollback();

@@ -6,9 +6,12 @@ import {
   Param,
   Post,
   Put,
+  UsePipes,
 } from '@nestjs/common';
 import { EventService } from '../services/event.service';
 import { TCreateEvent } from '../types/event.types';
+import { JoiValidationPipe } from '../../utils/utils';
+import { eventSchema } from '../schemas/event.joi.schema';
 
 @Controller('event')
 export class EventController {
@@ -17,8 +20,19 @@ export class EventController {
   ) {}
 
   @Post()
-  async createEvent(@Body() data: TCreateEvent) {
+  async createEvent(
+    @Body(new JoiValidationPipe(eventSchema)) data: TCreateEvent,
+  ) {
     return await this.eventService.createEvent(data);
+  }
+
+  @Put(':eventId')
+  async updateEvent(
+    @Param('eventId') eventId: string,
+    @Body(new JoiValidationPipe(eventSchema)) data: TCreateEvent,
+  ) {
+    console.log('updating event controller');
+    return await this.eventService.updateEvent(eventId, data);
   }
 
   @Put('/ticket/sold/:ticketId')

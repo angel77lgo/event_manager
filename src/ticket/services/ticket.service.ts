@@ -100,8 +100,6 @@ export class TicketService {
 
     const ticket = await this.getTicketWithStatusById(ticketId);
 
-    console.log('ticket', ticket);
-
     this.validateTicketToRedeem(ticket, ticketId);
 
     try {
@@ -112,6 +110,28 @@ export class TicketService {
 
       await this.ticketStatusLogService.create(
         { ticketId, ticketStatusId: ticketStatus.id },
+        transaction,
+      );
+      if (!ts) await transaction.commit();
+    } catch (error) {
+      if (!ts) await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async deleteTicketById(ticketId: string, ts?: Transaction) {
+    const transaction = !ts
+      ? await this.ticketRepository.sequelize.transaction()
+      : ts;
+
+    try {
+      await this.ticketRepository.update(
+        { deletedAt: new Date() },
+        { where: { id: ticketId }, transaction },
+      );
+
+      await this.ticketStatusLogService.deleteLogByTicketId(
+        ticketId,
         transaction,
       );
       if (!ts) await transaction.commit();
@@ -157,8 +177,6 @@ export class TicketService {
     }
 
     const statusName = ticket.logs[0].ticketStatus.name as TICKET_STATUS;
-
-    console.log('statusName', statusName);
 
     if (
       !ticket.isAvailable &&
