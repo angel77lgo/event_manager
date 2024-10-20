@@ -7,7 +7,7 @@ async function bootstrap() {
   dotenv.config();
   const app = await NestFactory.create(AppModule);
 
-  const options = new DocumentBuilder().setTitle('Ticketing API').build();
+  const options = new DocumentBuilder().setTitle('Event Manager API').build();
 
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('api-docs', app, document);
