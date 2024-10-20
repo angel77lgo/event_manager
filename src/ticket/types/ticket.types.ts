@@ -16,5 +16,22 @@ export type TCreateTicketOptional = Optional<TCreateTicket, 'id'>;
 export enum TICKET_STATUS {
   PENDING = 'pending',
   SOLD = 'sold',
-  REDEEMED = 'redeemed',
+  REDEEMED = 'reedemed',
+}
+
+export const TICKETS_NOT_AVALIABLE = [
+  TICKET_STATUS.SOLD,
+  TICKET_STATUS.REDEEMED,
+];
+
+export interface TTicketDto {
+  id: string;
+  isAvailable: boolean;
+  status: string;
+}
+
+export interface TTicketDetailDto {
+  ticketsSold: number;
+  ticketsRedeemed: number;
+  tickets: TTicketDto[];
 }

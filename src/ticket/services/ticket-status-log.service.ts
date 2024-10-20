@@ -23,6 +23,8 @@ export class TicketStatusLogService {
         where: { ticketId, validUntil: null },
       });
 
+      console.log('currentStatus', currentStatus);
+
       if (currentStatus) {
         await this.deleteTicketStatus(currentStatus.id, transaction);
       }

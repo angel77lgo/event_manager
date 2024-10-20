@@ -34,7 +34,7 @@ export class TicketStatusLog extends Model {
   @BelongsTo(() => TicketStatus)
   ticketStatus: TicketStatus;
 
-  @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
+  @Column({ type: DataTypes.DATE, allowNull: true })
   validUntil: Date;
 
   @Column({ type: DataTypes.DATE, defaultValue: DataTypes.NOW })
